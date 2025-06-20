@@ -11,7 +11,7 @@ const App = () => (
       {/*<Toaster />
       <Sonner />*/}
       <BrowserRouter>
-        <div className='min-h-screen w-full bg-background text-foreground antialiased'>
+        <div className="min-h-screen w-full bg-background text-foreground antialiased">
           <Routes>
             <Route path="/" element={<Index />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
