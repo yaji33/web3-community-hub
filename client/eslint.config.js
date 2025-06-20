@@ -34,7 +34,7 @@ export default tseslint.config(
       'prettier/prettier': [
         'warn',
         {
-          endOfLine: 'lf',
+          endOfLine: 'auto',
         },
       ],
       '@typescript-eslint/no-unused-vars': 'warn',
