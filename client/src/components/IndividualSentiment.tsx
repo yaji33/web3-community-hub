@@ -49,7 +49,7 @@ export const IndividualSentiments: React.FC = () => {
         );
       } catch (err) {
         console.error('Error setting up real-time subscription:', err);
-        setError('Failed to set up real-time updates');
+        //setError('Failed to set up real-time updates');
       }
     }
 
