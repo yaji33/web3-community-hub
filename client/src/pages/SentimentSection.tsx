@@ -4,24 +4,16 @@ import { Sentiment } from '@/components/Sentiment';
 import { Insights } from '@/components/Insights';
 import { IndividualSentiments } from '@/components/IndividualSentiment';
 import { WordCloudData } from '@/types/sentiment';
+import { getAllSentiments } from '@/lib/database';
 
 export const SentimentSection = () => {
   const [wordCloudData, setWordCloudData] = useState<WordCloudData[]>([]);
   const [sentiments, setSentiments] = useState<string[]>([]);
 
-  const loadSentiments = useCallback(() => {
-    const mockSentiments = [
-      'Magic Newton is amazing and innovative',
-      'Love the automation features',
-      'Great work on the AI agents',
-      'Cross-chain functionality is wow',
-      'Really happy with the innovation',
-      'Bullish on the future',
-      'Sad that not more people know about it',
-      'Should be more popular',
-    ];
-    setSentiments(mockSentiments);
-    generateWordCloud(mockSentiments);
+  const loadSentiments = useCallback(async () => {
+    const data = await getAllSentiments();
+    setSentiments(data);
+    generateWordCloud(data);
   }, []);
 
   useEffect(() => {
@@ -67,9 +59,8 @@ export const SentimentSection = () => {
     generateWordCloud(updatedSentiments);
   };
 
-  // Calculate insights
   const activeWords = wordCloudData.length;
-  const contributors = new Set(sentiments).size; // Unique sentiments as proxy for contributors
+  const contributors = sentiments.length;
 
   return (
     <div className="min-h-screen">
@@ -81,7 +72,6 @@ export const SentimentSection = () => {
           </div>
           <div className="lg:col-span-4 space-y-6">
             <Sentiment onSentimentAdded={handleSentimentSubmit} />
-
             <Insights activeWords={activeWords} contributors={contributors} />
           </div>
         </div>
