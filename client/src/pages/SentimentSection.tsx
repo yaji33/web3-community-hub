@@ -73,7 +73,7 @@ export const SentimentSection = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto px-12 ">
+      <div className="container mx-auto lg:px-12 md:px-8 sm:px-4">
         {/* Header Section */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
           <div className="lg:col-span-8">
