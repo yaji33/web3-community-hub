@@ -14,7 +14,7 @@ export const ProjectNavigation: React.FC = () => {
           onClick={() => setActiveTab(tab.name)}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
             activeTab === tab.name
-              ? 'bg-gradient-to-r text-white shadow-lg transform scale-105'
+              ? 'bg-gradient-to-r text-white shadow-lg transform scale-105 !bg-gray-800'
               : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:text-white border border-gray-700/50'
           }`}
         >
