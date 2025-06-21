@@ -1,24 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { WordCloud } from '@/components/WordCloud';
 import { Sentiment } from '@/components/Sentiment';
 import { Insights } from '@/components/Insights';
-
-interface WordCloudData {
-  size: number;
-  text: string;
-  value: number;
-}
+import { IndividualSentiments } from '@/components/IndividualSentiment';
+import { WordCloudData } from '@/types/sentiment';
 
 export const SentimentSection = () => {
   const [wordCloudData, setWordCloudData] = useState<WordCloudData[]>([]);
   const [sentiments, setSentiments] = useState<string[]>([]);
 
-  useEffect(() => {
-    loadSentiments();
-  }, []);
-
-  const loadSentiments = () => {
-    // Simulating stored sentiments since localStorage isn't available
+  const loadSentiments = useCallback(() => {
     const mockSentiments = [
       'Magic Newton is amazing and innovative',
       'Love the automation features',
@@ -31,7 +22,11 @@ export const SentimentSection = () => {
     ];
     setSentiments(mockSentiments);
     generateWordCloud(mockSentiments);
-  };
+  }, []);
+
+  useEffect(() => {
+    loadSentiments();
+  }, [loadSentiments]);
 
   const generateWordCloud = (sentiments: string[]) => {
     const wordCount: { [key: string]: number } = {};
@@ -43,7 +38,7 @@ export const SentimentSection = () => {
         .split(/\s+/)
         .filter(
           word =>
-            word.length > 2 &&
+            word.length > 3 &&
             !['this', 'that', 'with', 'have', 'they', 'from', 'and'].includes(
               word
             )
@@ -77,33 +72,24 @@ export const SentimentSection = () => {
   const contributors = new Set(sentiments).size; // Unique sentiments as proxy for contributors
 
   return (
-    <div className="min-h-screen p-6">
-      <section className="max-w-7xl mx-auto space-y-6">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-white mb-2">
-            Community Sentiment
-          </h2>
-          <p className="text-purple-200">
-            What do you think about Magic Newton?
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {/* Word Cloud - Takes 8 columns (2/3 width) */}
-          <div className="md:col-span-8 col-span-1">
-            <WordCloud words={wordCloudData} />
+    <div className="min-h-screen">
+      <div className="container mx-auto px-12 ">
+        {/* Header Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+          <div className="lg:col-span-8">
+            <WordCloud data={wordCloudData} />
           </div>
+          <div className="lg:col-span-4 space-y-6">
+            <Sentiment onSentimentAdded={handleSentimentSubmit} />
 
-          {/* Right side - Takes 4 columns (1/3 width) */}
-          <div className="md:col-span-4 col-span-1 space-y-6">
-            {/* Share Your Thoughts Card */}
-            <Sentiment onSentimentSubmit={handleSentimentSubmit} />
-
-            {/* Community Insights Card */}
             <Insights activeWords={activeWords} contributors={contributors} />
           </div>
         </div>
-      </section>
+
+        <div className="mt-8">
+          <IndividualSentiments />
+        </div>
+      </div>
     </div>
   );
 };

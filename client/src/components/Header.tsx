@@ -8,7 +8,7 @@ export const Header = () => {
         <div className="flex items-center justify-center space-x-3">
           <div className="flex items-center space-x-2"></div>
           <div className="text-center">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
               Web3 Community Word Hub
             </h1>
           </div>

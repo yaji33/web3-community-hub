@@ -7,7 +7,7 @@ export const ProjectNavigation: React.FC = () => {
   const tabs = [{ name: 'Newton', logo: NewtonLogo }];
 
   return (
-    <div className="flex flex-wrap justify-center gap-2 mb-8">
+    <div className="flex flex-wrap justify-center gap-2">
       {tabs.map(tab => (
         <button
           key={tab.name}
