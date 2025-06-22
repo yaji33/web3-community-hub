@@ -2,7 +2,7 @@ export const Footer = () => {
   return (
     <footer className="bg-black/20 backdrop-blur-md border-t border-purple-500/20 mt-12">
       <div className="container mx-auto px-4 py-6 flex flex-col items-center justify-center space-y-2 text-gray-300">
-        <p>© {new Date().getFullYear()} Yaji. All rights reserved.</p>
+        <p>Developed by: </p>
         <a
           href="https://x.com/Yaji_33"
           target="_blank"
