@@ -29,7 +29,7 @@ export const ProjectNavigation: React.FC<ProjectNavigationProps> = ({
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 flex items-center gap-2 ${
             activeProject === tab.id
               ? 'bg-gradient-to-r text-white shadow-lg transform scale-105 !bg-gray-800'
-              : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:text-white border border-gray-700/50'
+              : '!bg-gray-800/50 text-gray-300 hover:bg-gray-700/50 hover:text-white border border-gray-700/50'
           }`}
         >
           {tab.logo && (
