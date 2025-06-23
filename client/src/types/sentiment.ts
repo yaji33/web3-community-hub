@@ -14,7 +14,7 @@ export interface SentimentPayload {
 }
 
 export interface WordCloudData {
-  size: number;
+  size?: number;
   text: string;
   value: number;
 }

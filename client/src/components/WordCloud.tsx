@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import cloud from 'd3-cloud';
 import * as d3 from 'd3';
@@ -6,19 +12,18 @@ import { getAllSentiments, subscribeToSentiments } from '@/lib/database';
 import { WordCloudData, CloudWord, SentimentPayload } from '@/types/sentiment';
 
 interface WordCloudProps {
-  data: WordCloudData[];
+  data?: WordCloudData[];
+  projectName?: string;
 }
 
 interface SentimentSubscription {
   unsubscribe: () => void;
 }
 
-// Word processing utility
 const processTextToWords = (sentiments: string[]): WordCloudData[] => {
   const wordCount: { [key: string]: number } = {};
-
-  // Common words to filter out
   const stopWords = new Set([
+    'feel',
     'the',
     'a',
     'an',
@@ -54,6 +59,7 @@ const processTextToWords = (sentiments: string[]): WordCloudData[] => {
     'might',
     'must',
     'can',
+    'shall',
     'i',
     'you',
     'he',
@@ -69,58 +75,270 @@ const processTextToWords = (sentiments: string[]): WordCloudData[] => {
     'my',
     'your',
     'his',
+    'hers',
     'its',
     'our',
     'their',
+    'mine',
+    'yours',
+    'theirs',
     'this',
     'that',
     'these',
     'those',
+    'here',
+    'there',
+    'where',
+    'when',
+    'why',
+    'how',
     'very',
     'really',
     'just',
     'so',
     'too',
     'also',
+    'only',
+    'even',
+    'still',
+    'well',
+    'get',
+    'got',
+    'go',
+    'going',
+    'went',
+    'come',
+    'came',
+    'take',
+    'took',
+    'make',
+    'made',
+    'see',
+    'saw',
+    'look',
+    'looked',
+    'know',
+    'knew',
+    'think',
+    'thought',
+    'say',
+    'said',
+    'tell',
+    'told',
+    'give',
+    'gave',
+    'find',
+    'found',
+    'use',
+    'used',
+    'work',
+    'worked',
+    'want',
+    'wanted',
+    'need',
+    'needed',
+    'try',
+    'tried',
+    'keep',
+    'kept',
+    'put',
+    'set',
+    'one',
+    'two',
+    'three',
+    'first',
+    'last',
+    'new',
+    'old',
+    'good',
+    'bad',
+    'big',
+    'small',
+    'long',
+    'short',
+    'high',
+    'low',
+    'right',
+    'left',
+    'next',
+    'same',
+    'different',
+    'about',
+    'after',
+    'again',
+    'against',
+    'all',
+    'any',
+    'because',
+    'before',
+    'between',
+    'both',
+    'each',
+    'few',
+    'from',
+    'into',
+    'more',
+    'most',
+    'other',
+    'some',
+    'such',
+    'than',
+    'through',
+    'during',
+    'above',
+    'below',
+    'up',
+    'down',
+    'out',
+    'off',
+    'over',
+    'under',
+    'not',
+    'no',
+    'nor',
+    'if',
+    'then',
+    'now',
+    'once',
+    'while',
+    'as',
+    'am',
+    'let',
+    'much',
+    'many',
+    'less',
+    'little',
+    'far',
+    'near',
+    'back',
+    'away',
+    'around',
+    'don',
+    'doesn',
+    'didn',
+    'won',
+    'wouldn',
+    'shouldn',
+    'couldn',
+    'mustn',
+    'needn',
+    'daren',
+    'mightn',
+    'shan',
+    'haven',
+    'hasn',
+    'hadn',
+    'isn',
+    'aren',
+    'wasn',
+    'weren',
+    'like',
+    'thing',
+    'things',
+    'something',
+    'anything',
+    'nothing',
+    'everything',
+    'someone',
+    'anyone',
+    'everyone',
+    'somewhere',
+    'anywhere',
+    'everywhere',
+    'way',
+    'ways',
+    'time',
+    'times',
+    'day',
+    'days',
+    'year',
+    'years',
+    'people',
+    'person',
+    'man',
+    'woman',
+    'child',
+    'children',
+    'place',
+    'world',
+    'life',
+    'hand',
+    'part',
+    'end',
+    'case',
+    'fact',
+    'lot',
+    'bit',
+    'kind',
+    'sort',
+    'type',
+    'stuff',
   ]);
 
-  // Process all sentiment texts
   sentiments.forEach(sentiment => {
-    const words = sentiment
-      .toLowerCase()
-      .replace(/[^\w\s]/g, ' ') // Remove punctuation
-      .split(/\s+/)
-      .filter(word => word.length > 2 && !stopWords.has(word));
-
-    words.forEach(word => {
-      wordCount[word] = (wordCount[word] || 0) + 1;
-    });
+    if (typeof sentiment === 'string' && sentiment.trim()) {
+      sentiment
+        .toLowerCase()
+        .replace(/[^\w\s'-]/g, ' ')
+        .replace(/\b\w*\d+\w*\b/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(/\s+/)
+        .map(word =>
+          word
+            .replace(/^['-]+|['-]+$/g, '')
+            .replace(/'t$/, '')
+            .replace(/'re$/, '')
+            .replace(/'ve$/, '')
+            .replace(/'ll$/, '')
+            .replace(/'d$/, '')
+            .replace(/'s$/, '')
+        )
+        .filter(word => isValidWord(word, stopWords))
+        .forEach(word => {
+          const normalizedWord = word.toLowerCase().trim();
+          if (normalizedWord && !stopWords.has(normalizedWord)) {
+            wordCount[normalizedWord] = (wordCount[normalizedWord] || 0) + 1;
+          }
+        });
+    }
   });
 
-  // Convert to array and sort by frequency
   return Object.entries(wordCount)
-    .map(([text, value]) => ({
-      text,
-      value,
-      size: value,
-    }))
+    .filter(([word]) => isValidWord(word, stopWords))
+    .map(([text, value]) => ({ text, value, size: value }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 50); // Limit to top 50 words
+    .slice(0, 50);
 };
 
-export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
+const isValidWord = (word: string, stopWords: Set<string>): boolean => {
+  if (!word || typeof word !== 'string') return false;
+  const cleanWord = word.toLowerCase().trim();
+  return (
+    cleanWord.length >= 3 &&
+    /[a-zA-Z]/.test(cleanWord) &&
+    !stopWords.has(cleanWord)
+  );
+};
+
+export const WordCloud: React.FC<WordCloudProps> = ({
+  projectName = 'magic-newton',
+  data: initialData = [],
+}) => {
   const svgRef = useRef<SVGSVGElement>(null);
   const [words, setWords] = useState<WordCloudData[]>([]);
-  const [_sentiments, setSentiments] = useState<string[]>([]);
+  const [sentiments, setSentiments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [animationKey, setAnimationKey] = useState(0);
-  const subscriptionRef = useRef<SentimentSubscription>(null);
+  const subscriptionRef = useRef<SentimentSubscription | null>(null);
   const isSubscriptionActive = useRef(false);
+  const [_debugInfo, setDebugInfo] = useState('');
 
   // Optimized word cloud update function
   const updateWordCloud = useCallback((sentimentList: string[]) => {
     console.log('Updating word cloud with', sentimentList.length, 'sentiments');
+    setDebugInfo(`Processing ${sentimentList.length} sentiments...`);
 
     if (sentimentList.length > 0) {
       const processedWords = processTextToWords(sentimentList);
@@ -131,82 +349,95 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
     }
   }, []);
 
+  // Process combined sentiments and initial data
+  const processedInitialData = useMemo(
+    () =>
+      processTextToWords(sentiments.concat(initialData.map(d => d.text || ''))),
+    [initialData, sentiments]
+  );
+
+  // Set words from initial data or processed data
   useEffect(() => {
     if (initialData && initialData.length > 0) {
       setWords(initialData);
+    } else {
+      setWords(processedInitialData);
     }
-  }, [initialData]);
+    setLoading(false);
+  }, [initialData, processedInitialData]);
 
   // Load initial sentiments
   useEffect(() => {
+    let isMounted = true;
     const loadSentiments = async () => {
       try {
         setLoading(true);
         setError(null);
-        console.log('Loading initial sentiments...');
+        setDebugInfo('Loading sentiments...');
+        console.log('Loading initial sentiments for project:', projectName);
 
-        const sentimentTexts = await getAllSentiments();
-        console.log('Loaded', sentimentTexts.length, 'initial sentiments');
+        const sentimentTexts = await getAllSentiments(projectName);
+        console.log('Loaded sentiments:', sentimentTexts);
+        setDebugInfo(`Loaded ${sentimentTexts.length} sentiments`);
 
-        setSentiments(sentimentTexts);
-        updateWordCloud(sentimentTexts);
+        if (isMounted) {
+          setSentiments(sentimentTexts);
+          updateWordCloud(sentimentTexts);
+        }
       } catch (err) {
         console.error('Error loading sentiments:', err);
-        setError('Failed to load community sentiments');
+        if (isMounted) {
+          setError('Failed to load community sentiments');
+          setDebugInfo(
+            `Error: ${err instanceof Error ? err.message : 'Unknown error'}`
+          );
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
-    loadSentiments();
-  }, [updateWordCloud]);
-
-  // Setup real-time subscription
-  useEffect(() => {
-    if (isSubscriptionActive.current) {
-      console.log('Subscription already active, skipping...');
-      return;
+    if (initialData.length === 0) {
+      loadSentiments();
     }
-
-    console.log('Setting up real-time subscription...');
-    isSubscriptionActive.current = true;
-
-    subscriptionRef.current = subscribeToSentiments((sentiment: unknown) => {
-      const payload = sentiment as SentimentPayload;
-
-      if (payload?.new?.sentiment_text) {
-        const newSentimentText = payload.new.sentiment_text;
-
-        setSentiments(prev => {
-          const updated = [newSentimentText, ...prev];
-          setImmediate(() => updateWordCloud(updated));
-          return updated;
-        });
-      }
-    });
 
     return () => {
-      console.log('Cleaning up subscription...');
-      isSubscriptionActive.current = false;
-      if (subscriptionRef.current) {
-        subscriptionRef.current.unsubscribe();
-        subscriptionRef.current = null;
-      }
+      isMounted = false;
     };
-  }, [updateWordCloud]);
+  }, [updateWordCloud, projectName, initialData.length]);
 
-  // D3 word cloud rendering with smooth animations
+  // Handle real-time sentiment subscriptions
   useEffect(() => {
-    if (!Array.isArray(words) || words.length === 0 || !svgRef.current) {
-      console.log('Skipping render - no words or SVG ref');
-      return;
-    }
+    if (isSubscriptionActive.current) return;
+    isSubscriptionActive.current = true;
 
-    console.log('Rendering word cloud with', words.length, 'words');
+    subscriptionRef.current = subscribeToSentiments(
+      projectName,
+      (sentiment: unknown) => {
+        const payload = sentiment as SentimentPayload;
+        if (payload?.new && payload.new.sentiment_text) {
+          const newSentiment = payload.new;
+          setSentiments(prev =>
+            [newSentiment.sentiment_text, ...prev].slice(0, 100)
+          );
+          updateWordCloud([newSentiment.sentiment_text, ...sentiments]);
+        }
+      }
+    );
+
+    return () => {
+      isSubscriptionActive.current = false;
+      if (subscriptionRef.current) subscriptionRef.current.unsubscribe();
+    };
+  }, [updateWordCloud, projectName, sentiments]);
+
+  useEffect(() => {
+    if (!svgRef.current || words.length === 0) return;
 
     const svg = d3.select(svgRef.current);
     const width = 700;
     const height = 400;
+    svg.selectAll('*').remove();
 
     const colors = [
       '#60A5FA',
@@ -218,7 +449,6 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
       '#10B981',
       '#8B5CF6',
     ];
-
     const maxValue = Math.max(...words.map(w => w.value));
     const minValue = Math.min(...words.map(w => w.value));
     const fontScale = d3
@@ -226,29 +456,15 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
       .domain([minValue, maxValue])
       .range([16, 60]);
 
-    // Store previous positions for smooth transitions
     const existingWords = new Map<
       string,
       { x: number; y: number; rotate: number }
     >();
-
-    svg.selectAll<SVGTextElement, CloudWord>('text').each(function (d) {
-      if (d && d.text) {
-        existingWords.set(d.text, {
-          x: d.x ?? 0,
-          y: d.y ?? 0,
-          rotate: d.rotate ?? 0,
-        });
-      }
-    });
-
     const layout = cloud<CloudWord>()
       .size([width, height])
       .words(words.map(d => ({ ...d, size: fontScale(d.value) })))
       .padding(8)
-      .rotate(() => {
-        return Math.random() < 0.7 ? 0 : 90;
-      })
+      .rotate(() => (Math.random() < 0.7 ? 0 : 90))
       .font(
         'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
       )
@@ -277,6 +493,7 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
       const textElements = g
         .selectAll<SVGTextElement, CloudWord>('text')
         .data(cloudWords, d => d.text);
+
       // Handle entering elements
       const enteringText = textElements
         .enter()
@@ -288,7 +505,7 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
         )
         .style('font-weight', '600')
         .style('cursor', 'pointer')
-        .text(d => d.text)
+        .text(d => d.text.charAt(0).toUpperCase() + d.text.slice(1)) // Capitalize first letter
         .style('fill', (_, i) => colors[i % colors.length])
         .style('opacity', 0)
         .attr('transform', d => {
@@ -352,7 +569,6 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
 
   return (
     <Card className="bg-black/40 backdrop-blur-md border-purple-500/30 h-full relative overflow-hidden">
-      {/* Enhanced background with smoother gradients */}
       <div className="absolute inset-0 pointer-events-none">
         <svg
           width="100%"
@@ -362,7 +578,6 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
           preserveAspectRatio="xMidYMid slice"
         >
           <defs>
-            {/* Noise filter */}
             <filter id="noiseFilter" x="0%" y="0%" width="100%" height="100%">
               <feTurbulence
                 baseFrequency="0.9"
@@ -378,15 +593,12 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
                 />
               </feComponentTransfer>
             </filter>
-
-            {/* Gradient overlays */}
             <radialGradient id="centerGlow" cx="50%" cy="40%" r="60%">
               <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.08" />
               <stop offset="30%" stopColor="#06B6D4" stopOpacity="0.12" />
               <stop offset="60%" stopColor="#10B981" stopOpacity="0.06" />
               <stop offset="100%" stopColor="#000000" stopOpacity="0.03" />
             </radialGradient>
-
             <linearGradient
               id="depthGradient"
               x1="0%"
@@ -400,9 +612,35 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
               <stop offset="75%" stopColor="#FBBF24" stopOpacity="0.03" />
               <stop offset="100%" stopColor="#EF4444" stopOpacity="0.05" />
             </linearGradient>
+            <radialGradient id="animatedGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.03">
+                <animate
+                  attributeName="stop-opacity"
+                  values="0.03;0.08;0.03"
+                  dur="4s"
+                  repeatCount="indefinite"
+                />
+              </stop>
+              <stop offset="50%" stopColor="#06B6D4" stopOpacity="0.05">
+                <animate
+                  attributeName="stop-opacity"
+                  values="0.05;0.12;0.05"
+                  dur="4s"
+                  repeatCount="indefinite"
+                  begin="1s"
+                />
+              </stop>
+              <stop offset="100%" stopColor="#10B981" stopOpacity="0.02">
+                <animate
+                  attributeName="stop-opacity"
+                  values="0.02;0.06;0.02"
+                  dur="4s"
+                  repeatCount="indefinite"
+                  begin="2s"
+                />
+              </stop>
+            </radialGradient>
           </defs>
-
-          {/* Layered background for depth */}
           <rect
             width="100%"
             height="100%"
@@ -418,8 +656,7 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
 
       <CardHeader className="relative z-10">
         <CardTitle className="text-white font-sans">
-          Community Word Cloud
-          {/* Real-time indicator */}
+          Community Word Cloud{' '}
           <span className="ml-2 inline-flex items-center">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
@@ -434,26 +671,24 @@ export const WordCloud: React.FC<WordCloudProps> = ({ data: initialData }) => {
           {loading ? (
             <div className="text-center text-gray-400 font-sans">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400 mx-auto mb-4"></div>
-              <p>Loading community thoughts...</p>
+              Loading community thoughts...
             </div>
           ) : error ? (
             <div className="text-center text-red-400 font-sans">
-              <p className="text-lg mb-2">⚠️ {error}</p>
+              <p className="text-lg mb-2"> {error}</p>
               <p className="text-sm">Please try refreshing the page</p>
             </div>
           ) : words.length > 0 ? (
-            <div className="w-full h-96 flex items-center justify-center">
-              <svg
-                ref={svgRef}
-                width="700"
-                height="400"
-                className="overflow-visible font-sans"
-                style={{
-                  fontFamily:
-                    'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                }}
-              />
-            </div>
+            <svg
+              ref={svgRef}
+              width="700"
+              height="400"
+              className="overflow-visible font-sans"
+              style={{
+                fontFamily:
+                  'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+              }}
+            />
           ) : (
             <div className="text-center text-gray-400 font-sans">
               <p className="text-lg mb-2">No sentiments yet!</p>

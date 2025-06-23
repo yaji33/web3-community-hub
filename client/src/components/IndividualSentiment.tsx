@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, MessageCircle, User, Clock } from 'lucide-react';
@@ -10,12 +10,31 @@ interface SentimentSubscription {
   unsubscribe: () => void;
 }
 
-export const IndividualSentiments: React.FC = () => {
+interface IndividualSentimentsProps {
+  projectName?: string;
+}
+
+export const IndividualSentiments: React.FC<IndividualSentimentsProps> = ({
+  projectName = 'magic-newton',
+}) => {
   const [sentiments, setSentiments] = useState<SentimentEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const subscriptionRef = useRef<SentimentSubscription | null>(null);
+
+  const loadSentiments = useCallback(async () => {
+    try {
+      setError(null);
+      const fullSentiments = await getFullSentiments(projectName);
+      setSentiments(fullSentiments);
+    } catch (err) {
+      setError('Failed to load sentiments');
+      console.error('Error loading sentiments:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [projectName]);
 
   useEffect(() => {
     loadSentiments();
@@ -23,16 +42,14 @@ export const IndividualSentiments: React.FC = () => {
     // Set up real-time subscription only if not already subscribed
     if (!subscriptionRef.current) {
       try {
-        // Use the correct callback signature and cast within the callback
+        // Pass both projectName and callback to subscribeToSentiments
         subscriptionRef.current = subscribeToSentiments(
-          (sentiment: unknown) => {
+          projectName,
+          (sentiment: SentimentPayload) => {
             console.log('Individual sentiments update:', sentiment);
 
-            // Cast the unknown parameter to your expected type
-            const payload = sentiment as SentimentPayload;
-
-            if (payload?.new) {
-              const newSentiment = payload.new;
+            if (sentiment?.new) {
+              const newSentiment = sentiment.new;
 
               setSentiments(prev => {
                 const filtered = prev.filter(
@@ -49,7 +66,7 @@ export const IndividualSentiments: React.FC = () => {
         );
       } catch (err) {
         console.error('Error setting up real-time subscription:', err);
-        //setError('Failed to set up real-time updates');
+        // setError('Failed to set up real-time updates');
       }
     }
 
@@ -60,19 +77,7 @@ export const IndividualSentiments: React.FC = () => {
         subscriptionRef.current = null;
       }
     };
-  }, []);
-  const loadSentiments = async () => {
-    try {
-      setError(null);
-      const fullSentiments = await getFullSentiments();
-      setSentiments(fullSentiments);
-    } catch (err) {
-      setError('Failed to load sentiments');
-      console.error('Error loading sentiments:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [projectName, loadSentiments]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

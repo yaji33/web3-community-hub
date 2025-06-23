@@ -15,6 +15,7 @@ import { submitSentiment, canUserSubmit } from '@/lib/database';
 import { useToast } from '@/hooks/use-toast';
 
 interface SentimentProps {
+  projectName?: string;
   onSentimentAdded?: (sentiment: string, name?: string) => void;
 }
 
@@ -24,7 +25,10 @@ interface SubmissionStatus {
   nextSubmissionTime?: Date;
 }
 
-export const Sentiment: React.FC<SentimentProps> = ({ onSentimentAdded }) => {
+export const Sentiment: React.FC<SentimentProps> = ({
+  projectName = 'magic-newton',
+  onSentimentAdded,
+}) => {
   const [sentiment, setSentiment] = useState('');
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,7 +48,7 @@ export const Sentiment: React.FC<SentimentProps> = ({ onSentimentAdded }) => {
     // Check every 30 seconds
     const interval = setInterval(checkSubmissionStatus, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [projectName]); // Add projectName to dependency array
 
   // Update countdown timer
   useEffect(() => {
@@ -76,7 +80,7 @@ export const Sentiment: React.FC<SentimentProps> = ({ onSentimentAdded }) => {
 
   const checkSubmissionStatus = async () => {
     try {
-      const status = await canUserSubmit();
+      const status = await canUserSubmit(projectName); // Pass projectName
       setSubmissionStatus(status);
     } catch (error) {
       console.error('Error checking submission status:', error);
@@ -162,7 +166,12 @@ export const Sentiment: React.FC<SentimentProps> = ({ onSentimentAdded }) => {
     try {
       console.log('Submitting sentiment:', sentiment);
 
-      const result = await submitSentiment(sentiment, name || undefined);
+      // Fix the function call - pass projectName and handle optional name
+      const result = await submitSentiment(
+        sentiment,
+        projectName,
+        name || undefined
+      );
 
       if (result.success) {
         console.log('Sentiment submitted successfully:', result.data);

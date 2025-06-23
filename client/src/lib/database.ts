@@ -86,7 +86,7 @@ const generateCanvasFingerprint = async (): Promise<string> => {
     ctx.fillStyle = '#f60';
     ctx.fillRect(125, 1, 62, 20);
     ctx.fillStyle = '#069';
-    ctx.fillText('Magic Newton Fingerprint', 2, 15);
+    ctx.fillText('Community Fingerprint', 2, 15);
     ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
     ctx.fillText('Unique Browser ID', 4, 35);
 
@@ -221,9 +221,10 @@ const validateContent = (
   return { isValid: true };
 };
 
-// Enhanced submit function with multiple layers of protection
+// Enhanced submit function with project name parameter
 export const submitSentiment = async (
   sentimentText: string,
+  projectName: string,
   contributorName?: string
 ): Promise<{ success: boolean; error?: string; data?: unknown }> => {
   try {
@@ -237,11 +238,12 @@ export const submitSentiment = async (
     const cleanText = sentimentText.trim();
     const cleanName = contributorName?.trim() || null;
 
-    // First, check recent submissions by this user (client-side check)
+    // First, check recent submissions by this user for this project
     const { data: recentSubmissions, error: checkError } = await supabase
       .from('community_sentiment')
       .select('created_at')
       .eq('user_ip_hash', userIdentifier)
+      .eq('project_name', projectName)
       .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()) // Last hour
       .order('created_at', { ascending: false });
 
@@ -250,11 +252,12 @@ export const submitSentiment = async (
       return { success: false, error: 'Unable to verify submission limits.' };
     }
 
-    // Rate limiting: max 3 submissions per hour
+    // Rate limiting: max 3 submissions per hour per project
     if (recentSubmissions && recentSubmissions.length >= 3) {
       return {
         success: false,
-        error: 'Rate limit exceeded. Maximum 3 submissions per hour.',
+        error:
+          'Rate limit exceeded. Maximum 3 submissions per hour per project.',
       };
     }
 
@@ -264,6 +267,7 @@ export const submitSentiment = async (
       .select('id')
       .eq('sentiment_text', cleanText)
       .eq('user_ip_hash', userIdentifier)
+      .eq('project_name', projectName)
       .gte(
         'created_at',
         new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
@@ -282,13 +286,13 @@ export const submitSentiment = async (
       };
     }
 
-    // Submit to database with additional metadata
+    // Submit to database with project name
     const { data, error } = await supabase
       .from('community_sentiment')
       .insert({
         contributor_name: cleanName,
         user_ip_hash: userIdentifier,
-        project_name: 'Magic Newton',
+        project_name: projectName,
         sentiment_text: cleanText,
       })
       .select('*')
@@ -324,8 +328,10 @@ export const submitSentiment = async (
   }
 };
 
-// Additional function to check if user can submit (for UI feedback)
-export const canUserSubmit = async (): Promise<{
+// Updated function to check if user can submit for specific project
+export const canUserSubmit = async (
+  projectName: string
+): Promise<{
   canSubmit: boolean;
   remainingSubmissions: number;
   nextSubmissionTime?: Date;
@@ -337,6 +343,7 @@ export const canUserSubmit = async (): Promise<{
       .from('community_sentiment')
       .select('created_at')
       .eq('user_ip_hash', userIdentifier)
+      .eq('project_name', projectName)
       .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
       .order('created_at', { ascending: false });
 
@@ -389,13 +396,15 @@ const sanitizePayload = (payload: SentimentPayload): SentimentPayload => {
   };
 };
 
-// Get all sentiments with sanitization
-export const getAllSentiments = async (): Promise<string[]> => {
+// Get all sentiments for specific project
+export const getAllSentiments = async (
+  projectName: string
+): Promise<string[]> => {
   try {
     const { data, error } = await supabase
       .from('community_sentiment')
       .select('sentiment_text')
-      .eq('project_name', 'Magic Newton')
+      .eq('project_name', projectName)
       .order('created_at', { ascending: false })
       .limit(100);
 
@@ -412,19 +421,20 @@ export const getAllSentiments = async (): Promise<string[]> => {
   }
 };
 
-// Enhanced real-time subscription with sanitization
+// Enhanced real-time subscription with project filter
 export const subscribeToSentiments = (
+  projectName: string,
   callback: (sentiment: SentimentPayload) => void
 ) => {
   return supabase
-    .channel('community_sentiment_changes')
+    .channel(`community_sentiment_changes_${projectName}`)
     .on(
       'postgres_changes',
       {
         event: 'INSERT',
         schema: 'public',
         table: 'community_sentiment',
-        filter: 'project_name=eq.Magic Newton',
+        filter: `project_name=eq.${projectName}`,
       },
       (payload: RealtimePostgresInsertPayload<SentimentEntry>) => {
         const sentimentPayload: SentimentPayload = {
@@ -441,13 +451,15 @@ export const subscribeToSentiments = (
     .subscribe();
 };
 
-// Keep existing functions unchanged
-export const getFullSentiments = async (): Promise<SentimentEntry[]> => {
+// Get full sentiments for specific project
+export const getFullSentiments = async (
+  projectName: string
+): Promise<SentimentEntry[]> => {
   try {
     const { data, error } = await supabase
       .from('community_sentiment')
       .select('*')
-      .eq('project_name', 'Magic Newton')
+      .eq('project_name', projectName)
       .order('created_at', { ascending: false })
       .limit(50);
 
